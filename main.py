@@ -24,7 +24,7 @@ def retrieve_safety_code(file):
     """
 
     try:
-        pcap_file = RawPcapReader()
+        pcap_file = RawPcapReader(file)
     except FileNotFoundError:
         raise FileNotFoundError('Could not find the pcap file')
 
@@ -130,15 +130,15 @@ if __name__ == "__main__":
     except (OSError, IOError, FileNotFoundError) as e:
         pdu_bytes, safe_code = retrieve_safety_code(args.filepath)
 
-    hashcat_format=f"{pdu_bytes.hex()}${safe_code}"
+    hashcat_format=f"{pdu_bytes.hex()}${safe_code}\n"
 
     pdu_hash = calculate_safety_code(pdu_bytes, IV)
 
     if pdu_hash == safe_code:
-        status("Woop woop hashes are matching!")
+        status(f"RaSTA network uses the default IV: [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476]")
         exitcode = 0
     else:
-        status("ERROR: Hashes not equal")
+        status("RaSTA network does not use Standard IV")
         exitcode = 1
 
     if args.hashcat:
@@ -153,10 +153,10 @@ if __name__ == "__main__":
             hashes_path = os.path.abspath(tmp.name)
             hashcat_code = 32500 if len(safe_code) == 32 else 32501
             if args.wordlist:
-                for output_line in run_hashcat(["hashcat","-m",f"{hashcat_code}","-a0",hashes_path,args.wordlist]):
+                for output_line in run_hashcat(["hashcat","-m",f"{hashcat_code}","-a0","--potfile-disable","--quiet",hashes_path,args.wordlist]):
                     print(output_line,end='')
             if args.pattern:
-                for output_line in run_hashcat(["hashcat","-m",f"{hashcat_code}","-a3","-w3",hashes_path,args.pattern]):
+                for output_line in run_hashcat(["hashcat","-m",f"{hashcat_code}","-a3","--potfile-disable","-w3","--quiet",hashes_path,args.pattern]):
                     print(output_line,end='')
             os.unlink(hashes_path)
 
